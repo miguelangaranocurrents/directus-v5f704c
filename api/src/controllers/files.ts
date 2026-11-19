@@ -75,7 +75,11 @@ export const multipartHandler: RequestHandler = (req, res, next) => {
 			return busboy.emit('error', new InvalidPayloadError({ reason: `File is missing filename` }));
 		}
 
-		if (isMimeTypeAllowed(mimeType, env['FILES_MIME_TYPE_ALLOW_LIST'] as string | string[]) === false) {
+		// Browsers omit the part's Content-Type when the file itself has no type; fall back to
+		// application/octet-stream like the import and tus upload paths do.
+		const type = mimeType || 'application/octet-stream';
+
+		if (isMimeTypeAllowed(type, env['FILES_MIME_TYPE_ALLOW_LIST'] as string | string[]) === false) {
 			return busboy.emit('error', new InvalidPayloadError({ reason: `File is of invalid content type` }));
 		}
 
@@ -91,7 +95,7 @@ export const multipartHandler: RequestHandler = (req, res, next) => {
 
 		const payloadWithRequiredFields = {
 			...payload,
-			type: mimeType,
+			type,
 		};
 
 		// Clear the payload for the next to-be-uploaded file
